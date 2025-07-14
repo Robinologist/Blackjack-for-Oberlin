@@ -4,16 +4,19 @@ class Program
     {
         #region Functions
 
-        List<Card> SetupDeck(int numSuits, int numValues)
+        List<Card> SetupDeck(int numSuits, int numValues, int numDecks)
         {
             List<Card> deck = new();
 
-            for (int s = 1; s <= numSuits; s++)
+            for (int d = 0; d < numDecks; d++)
             {
-                for (int v = 1; v <= numValues; v++)
+                for (int s = 1; s <= numSuits; s++)
                 {
-                    Card newCard = new(s, v);
-                    deck.Add(newCard);
+                    for (int v = 1; v <= numValues; v++)
+                    {
+                        Card newCard = new(s, v);
+                        deck.Add(newCard);
+                    }
                 }
             }
             return deck;
@@ -28,6 +31,7 @@ class Program
                 int randomIndex = random.Next(i, deck.Count);
                 (deck[i], deck[randomIndex]) = (deck[randomIndex], deck[i]);
             }
+
             return deck;
         }
 
@@ -51,10 +55,11 @@ class Program
 
         int numSuits = CardIcons.suits.Count();
         int numValues = CardIcons.values.Count();
+        int numDecks = 6;
 
-        List<Card> deck = SetupDeck(numSuits, numValues);
-        PrintDeck(deck);
+        List<Card> deck = SetupDeck(numSuits, numValues, numDecks);
         ShuffleDeck(deck);
+
         PrintDeck(deck);
 
         #endregion
@@ -88,3 +93,4 @@ public static class CardIcons
 }
 
 #endregion
+
