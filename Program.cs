@@ -2,24 +2,37 @@ class Program
 {
     static void Main(string[] args)
     {
-        int numSuits = 4;
-        int numValues = 13;
-
-        Console.WriteLine("Hello World");
-        SetupDeck(numSuits, numValues);
-        // switch (Console.ReadLine())
-
-        void SetupDeck(int numSuits, int numValues)
+        #region Functions
+        Card[] SetupDeck(int numSuits, int numValues)
         {
+            Card[] deck = new Card[numSuits * numValues];
+
             for (int s = 1; s <= numSuits; s++)
             {
                 for (int v = 1; v <= numValues; v++)
                 {
                     Card newCard = new(s, v);
-                    Console.WriteLine(s + " | " + v);
+                    deck[((s - 1) * numValues) + (v - 1)] = newCard;
+                    // Console.WriteLine(s + " | " + v);
                 }
             }
+
+            return deck;
         }
+
+        Card[] ShuffleDeck(Card[] deck)
+        {
+            return deck;
+        }
+        #endregion
+
+        #region Program
+        int numSuits = 4;
+        int numValues = 13;
+
+        Card[] deck = SetupDeck(numSuits, numValues);
+        ShuffleDeck(deck);
+        #endregion
     }
 }
 
