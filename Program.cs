@@ -13,7 +13,7 @@ class Program
                 {
                     Card newCard = new(s, v);
                     deck[((s - 1) * numValues) + (v - 1)] = newCard;
-                    // Console.WriteLine(s + " | " + v);
+                    Console.WriteLine(newCard.name + " " + newCard.nameAbbrev);
                 }
             }
 
@@ -26,9 +26,11 @@ class Program
         }
         #endregion
 
+        // =-=-=-=-=-=-=-= //
+
         #region Program
-        int numSuits = 4;
-        int numValues = 13;
+        int numSuits = CardIcons.suits.Length;
+        int numValues = CardIcons.values.Length;
 
         Card[] deck = SetupDeck(numSuits, numValues);
         ShuffleDeck(deck);
@@ -38,12 +40,24 @@ class Program
 
 public class Card
 {
-    int suit;
-    int value;
+    public readonly int suit;
+    public readonly int value;
+    public readonly string name;
+    public readonly string nameAbbrev;
 
     public Card(int _suit, int _value)
     {
         suit = _suit;
         value = _value;
+        name = CardIcons.values[value - 1] + " of " + CardIcons.suits[suit - 1];
+        nameAbbrev = "[" + CardIcons.valueAbbrevs[value - 1] + CardIcons.suitAbbrevs[suit - 1] + "]";
     }
+}
+
+public static class CardIcons
+{
+    public static string[] suits = { "Spades", "Hearts", "Clubs", "Diamonds" };
+    public static string[] suitAbbrevs = { "♠", "♥", "♣", "♦" };
+    public static string[] values = { "Ace", "Two", "Three", "Four", "Five", "Size", "Seven", "Eight", "Nine", "Ten", "Jack", "Queen", "King" };
+    public static string[] valueAbbrevs = { "A", "2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K" };
 }
