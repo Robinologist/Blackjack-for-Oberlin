@@ -1,25 +1,54 @@
 using System;
+using System.Formats.Asn1;
+using System.Security.Cryptography.X509Certificates;
 class Program
 {
+    public static int numDecks = 1;
+    public static int textSpeed = 10;
+    public static int lineDelay = 200;
+    public static int numSuits = CardIcons.suits.Count();
+    public static int numValues = CardIcons.values.Count();
+
+    #region Console Methods
+
+    public static void Log(string message, bool animateText = true)
+    {
+        Thread.Sleep(lineDelay);
+
+        if (animateText)
+        {
+            foreach (char c in message)
+            {
+                Console.Write(c);
+                Thread.Sleep(textSpeed);
+            }
+            Console.WriteLine();
+        }
+        else Console.WriteLine(message);
+    }
+
+    public static void LogPrompt(string message)
+    {
+        Log(message);
+        Console.Write("> ");
+    }
+
+    public static void DelayConsole(int delayCoefficient = 3)
+    {
+        Thread.Sleep(lineDelay * delayCoefficient);
+    }
+
     static void Main(string[] args)
     {
         float currentMoney = 1200;
         float currentBet = 0;
         bool isPlaying = true;
-        int numSuits = CardIcons.suits.Count();
-        int numValues = CardIcons.values.Count();
-        int numDecks = 1;
-        int gamePhase = 0;
-        List<Card> deck = new();
-        List<List<Card>> hands = new();
+        List<Card> deck = [];
+        List<Hand> hands = [];
 
-        void Log(string message, bool divider = false)
-        {
-            Console.WriteLine(message);
-            if (divider) Log("\n=-=-=\n");
-        }
+        #endregion
 
-        #region Deck-Management Functions
+        #region Deck-Management Methods
         List<Card> CreateDeck(int numSuits, int numValues, int numDecks)
         {
             List<Card> deck = new();
@@ -51,69 +80,71 @@ class Program
             return deck;
         }
 
-        void PrintHand(List<Card> deck)
-        {
-            foreach (Card card in deck) Log("> " + card.name + " " + card.nameAbbrev);
-        }
-
-        void DrawCard(List<Card> deck, List<Card> hand, int numCards = 1)
+        void DrawCard(Hand hand, List<Card> deck, int numCards = 1)
         {
             for (int i = 0; i < numCards; i++)
             {
-                hand.Add(deck[0]);
+                hand.cards.Add(deck[0]);
                 deck.RemoveAt(0);
             }
+            hand.Score();
         }
+
         #endregion
 
-        #region Gameplay Functions
+        #region Gameplay Methods
         void SetupPhase()
         {
+            Console.Clear();
+
             deck = CreateDeck(numSuits, numValues, numDecks);
             ShuffleDeck(deck);
 
-            hands = new List<List<Card>>() { new List<Card>(), new List<Card>() }; // Dealer's hand is always index 0
-            DrawCard(deck, hands[0], 2);
-
-            gamePhase = 1;
+            hands = new List<Hand>() { new Hand(), new Hand() }; // Dealer's hand is always index 0
+            DrawCard(hands[0], deck, 2);
         }
 
         void BettingPhase()
         {
-            Log("You have $" + currentMoney + ". How much would you like to bet? Alternatively, type \"exit\" to cash out now.");
-            string playerInput = Console.ReadLine().Trim().ToLower().TrimStart(['$']);
+            Console.Clear();
 
-            if (playerInput == "exit")
+            string? playerInput;
+            while (true)
             {
-                Log("\nYou cashed out with $" + currentMoney);
-                isPlaying = false;
-                return;
-            }
-            else if (float.TryParse(playerInput, out float bet))
-            {
-                if (bet <= 0)
+                LogPrompt("You have $" + currentMoney + ". How much would you like to bet? Alternatively, outcome \"exit\" to cash out now.");
+                playerInput = Console.ReadLine();
+                playerInput?.Trim().ToLower().TrimStart(['$']);
+
+                if (playerInput == "exit")
                 {
-                    Log("You're not getting into this game for free; please enter a larger bet.");
-                    return;
+                    Log("\nYou cashed out with $" + currentMoney);
+                    isPlaying = false;
+                    break;
                 }
-                if (bet > currentMoney)
+                else if (float.TryParse(playerInput, out float bet))
                 {
-                    Log("You do not have that much money; please enter a smaller bet.");
-                    return;
+                    if (bet <= 0)
+                    {
+                        Log("\nYou're not getting into this game for free; please enter a larger bet.");
+                    }
+                    if (bet > currentMoney)
+                    {
+                        Log("\nYou do not have that much money; please enter a smaller bet.");
+                    }
+                    else
+                    {
+                        Log("\nYou have bet $" + bet + " on this next game. Good luck!");
+                        DelayConsole(7);
+                        Console.Clear();
+                        currentMoney -= bet;
+                        currentBet = bet;
+                        break;
+                    }
                 }
                 else
                 {
-                    Log("You have bet $" + bet + " on this next game. Good luck!", true);
-                    currentMoney -= bet;
-                    currentBet = bet;
-                    gamePhase = 2;
-                    return;
+                    Log("\nInvalid input; Please try again.");
                 }
-            }
-            else
-            {
-                Log("Invalid input; Please try again.");
-                return;
             }
         }
 
@@ -121,101 +152,94 @@ class Program
         {
             for (int i = 1; i < hands.Count; i++)
             {
-                DrawCard(deck, hands[i], numCards);
+                DrawCard(hands[i], deck, numCards);
 
                 while (numCards > 0)
                 {
-                    Log("You have drawn the " + hands[i][hands[i].Count - numCards].name);
+                    Log("You have been dealt the " + hands[i].cards[^numCards].name);
                     numCards--;
+                    DelayConsole();
                 }
+                hands[i].Score();
 
-                Log("\nYour hand is now:\n");
-                PrintHand(hands[i]);
-
-                ScoreHand(hands[i]);
-                if (gamePhase != 2) return;
-
-                Log("\nYou may either hit or stand. Which would you like to do?\n");
-                string playerInput = Console.ReadLine().Trim().ToLower();
-                if (playerInput == "hit" || playerInput == "h") PlayerPhase();
-                else if (playerInput == "stay" || playerInput == "s") gamePhase = 3;
-                else
+                string? playerInput;
+                while (true)
                 {
-                    Log("Invalid input; Please try again.");
-                    PlayerPhase();
+                    Log("\nYour hand is:");
+                    DelayConsole();
+                    hands[i].Print();
+                    DelayConsole();
+
+                    // Outcomes
+                    if (hands[i].outcome == Hand.Type.Blackjack)
+                    {
+                        Log("\nBlackjack!\nLet's see if the dealer can match it.");
+                        DelayConsole();
+                        break;
+                    }
+                    else if (hands[i].outcome == Hand.Type.Bust)
+                    {
+                        Log("\nBust!\nYou have lost $" + currentBet + ".\n");
+                        DelayConsole();
+                        currentBet = 0;
+                        break;
+                    }
+                    else
+                    {
+                        Log("\nThe dealer's hand is:");
+                        DelayConsole();
+                        hands[0].Print(true);
+                        DelayConsole();
+
+                        // Player Input
+                        LogPrompt("\nYou may either hit or stand. Which would you like to do?\n");
+                        playerInput = Console.ReadLine();
+                        playerInput?.Trim().ToLower();
+
+                        if (playerInput == "hit" || playerInput == "h")
+                        {
+                            PlayerPhase();
+                        }
+                        else if (playerInput == "stand" || playerInput == "s") break;
+                        else
+                        {
+                            Log("Invalid input; Please try again.\n");
+                        }
+                    }
                 }
-            }
-        }
-        
-        void ScoreHand(List<Card> hand)
-        {
-            int handValue = 0;
-            int numAces = 0;
-
-            // Base scoring
-            foreach (Card card in hand)
-            {
-                if (card.value == 0) numAces++;
-                else if (card.value <= 10) handValue += card.value;
-                else handValue += 10;
-            }
-
-            // Ace scoring
-            int numElevens = numAces;
-            while (numElevens > 0)
-            {
-                int checkScore = handValue + (numElevens * 11);
-
-                if (checkScore < 21) handValue = checkScore;
-                else
-                {
-                    handValue++;
-                    numElevens--;
-                }
-            }
-
-            // Bust check
-            if (handValue == 21)
-            {
-                currentBet *= 1.5f;
-                currentMoney += currentBet;
-
-                Log("\nBlackjack!\nYou have won $" + currentBet + "!\n");
-                gamePhase = 0;
-            }
-            else if (handValue > 21)
-            {
-                Log("\nBust!\nYou have lost $" + currentBet + ".\n");
-                currentBet = 0;
-                gamePhase = 0;
             }
         }
 
         void DealerPhase()
         {
+            Console.Clear();
+
             Log("\nIt is the dealer's turn.\n");
-            // gamePhase = 0;
+            DelayConsole();
+            Log("\nThe dealer's hidden card was the " + hands[0].cards[hands[0].cards.Count - 1] + "\n");
+            DelayConsole();
         }
-        
+
+        // void Payout()
+        // {
+        //     currentBet *= 1.5f;
+        //     currentMoney += currentBet;
+
+        //     Log("\nYou have won $" + currentBet + "!\n");
+        // }
+
 
         #endregion
 
         #region Program
 
-        while (isPlaying) switch (gamePhase) // Gameplay loop
+        while (true)
         {
-            case 0:
-                SetupPhase();
-                break;
-            case 1:
-                BettingPhase();
-                break;
-            case 2:
-                PlayerPhase(2);
-                break;
-            case 3:
-                DealerPhase();
-                break;
+            SetupPhase();
+            BettingPhase();
+            if (!isPlaying) return;
+            PlayerPhase(2);
+            DealerPhase();
         }
 
         #endregion
@@ -247,6 +271,61 @@ class Program
         public static string[] values = ["Ace", "Two", "Three", "Four", "Five", "Six", "Seven", "Eight", "Nine", "Ten", "Jack", "Queen", "King"];
         public static string[] valueAbbrevs = ["A", "2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K"];
     }
+
+public class Hand
+{
+    public List<Card> cards = new();
+    int totalValue = 0;
+    public Type outcome = Type.Safe;
+
+    public void Score()
+    {
+        totalValue = 0;
+        int numAces = 0;
+
+        // Base scoring
+        foreach (Card card in cards)
+        {
+            if (card.value == 0) numAces++;
+            else if (card.value <= 10) totalValue += card.value;
+            else totalValue += 10;
+        }
+
+        // Ace scoring
+        int numElevens = numAces;
+        while (numElevens > 0)
+        {
+            int checkScore = totalValue + (numElevens * 11);
+
+            if (checkScore < 21) totalValue = checkScore;
+            else
+            {
+                totalValue++;
+                numElevens--;
+            }
+        }
+
+        // Outcomes
+        if (totalValue == 21) outcome = Type.Blackjack;
+        else if (totalValue > 21) outcome = Type.Bust;
+        else outcome = Type.Safe;
+    }
+
+    public void Print(bool showOnlyFirst = false)
+    {
+        for (int i = 0; i < cards.Count; i++)
+        {
+            Card card = cards[i];
+            if (showOnlyFirst && i > 0) Program.Log("• Unknown Card [?]");
+            else Program.Log("• " + card.name + " " + card.nameAbbrev);
+        }
+    }
+
+    public enum Type
+    {
+        Blackjack, Safe, Bust
+    }
+}
 
 #endregion
 
