@@ -1,5 +1,8 @@
 using System;
+using System.Collections;
 using System.Data.SqlTypes;
+using System.Formats.Asn1;
+using System.Security.Cryptography.X509Certificates;
 class Program
 {
     public static int numDecks = 1;
@@ -7,8 +10,8 @@ class Program
     public static int lineDelay = 120;
     public static int numSuits = CardIcons.suits.Count();
     public static int numValues = CardIcons.values.Count();
-    public static bool noConsoleDelay = false;
-    public static bool noConsoleClear = false;
+    public static bool noConsoleDelay = true;
+    public static bool noConsoleClear = true;
 
     #region Console Methods
 
@@ -32,7 +35,7 @@ class Program
     public static void LogPrompt(string prompt)
     {
         Log(prompt);
-        Console.Write("> ");
+        Console.Write("› ");
     }
 
     public static void LogHeader(string header)
@@ -58,50 +61,50 @@ class Program
     }
 
     #endregion
-    
+
     #region Deck-Management Methods
     public static List<Card> CreateDeck(int numSuits, int numValues, int numDecks)
-        {
-            List<Card> deck = [];
+    {
+        List<Card> deck = [];
 
-            for (int d = 0; d < numDecks; d++)
+        for (int d = 0; d < numDecks; d++)
+        {
+            for (int s = 1; s <= numSuits; s++)
             {
-                for (int s = 1; s <= numSuits; s++)
+                for (int v = 1; v <= numValues; v++)
                 {
-                    for (int v = 1; v <= numValues; v++)
-                    {
-                        Card newCard = new(s, v);
-                        deck.Add(newCard);
-                    }
+                    Card newCard = new(s, v);
+                    deck.Add(newCard);
                 }
             }
-            return deck;
         }
+        return deck;
+    }
 
-        public static List<Card> ShuffleDeck(List<Card> deck)
+    public static List<Card> ShuffleDeck(List<Card> deck)
+    {
+        Random random = new();
+
+        for (int i = 0; i < deck.Count; i++)
         {
-            Random random = new();
-
-            for (int i = 0; i < deck.Count; i++)
-            {
-                int randomIndex = random.Next(i, deck.Count);
-                (deck[i], deck[randomIndex]) = (deck[randomIndex], deck[i]);
-            }
-
-            return deck;
+            int randomIndex = random.Next(i, deck.Count);
+            (deck[i], deck[randomIndex]) = (deck[randomIndex], deck[i]);
         }
 
-        public static void DrawCard(Hand hand, List<Card> deck, int numCards = 1)
+        return deck;
+    }
+
+    public static void DrawCard(Hand hand, List<Card> deck, int numCards = 1)
+    {
+        for (int i = 0; i < numCards; i++)
         {
-            for (int i = 0; i < numCards; i++)
-            {
-                hand.cards.Add(deck[0]);
-                deck.RemoveAt(0);
-            }
-            hand.Score();
+            hand.cards.Add(deck[0]);
+            deck.RemoveAt(0);
         }
+        hand.Score();
+    }
 
-        #endregion
+    #endregion
 
     static void Main(string[] args)
     {
@@ -154,6 +157,7 @@ class Program
                 }
                 else if (float.TryParse(playerInput, out float bet))
                 {
+                    bet = (int)bet;
                     if (bet <= 0)
                     {
                         Log("\nUnfortunately, $0 is below the required ante; please enter a larger bet.\n");
@@ -178,38 +182,121 @@ class Program
             }
         }
 
-        void PlayerPhase(Hand hand, int numCards = 1)
+        void PlayerSetupPhase(Hand playerHand)
         {
             LogHeader("Player's Turn");
 
-            DrawCard(hand, deck, numCards);
+            Hand dealerHand = hands[0];
+            DrawCard(playerHand, deck, 2);
 
-            while (numCards > 0)
+            for (int i = 2; i > 0; i--)
             {
-                    Log("You have been dealt the " + hand.cards[^numCards].name);
-                    numCards--;
-                    DelayConsole();
-                }
-                hand.Score();
+                Log("You have been dealt the " + playerHand.cards[^i].name);
+                DelayConsole();
+            }
 
-                string? playerInput;
-                Log("\nYour hand is:");
-                DelayConsole();
-                hand.Print();
-                DelayConsole();
+            playerHand.Score();
+
+            Log("\nYour hand is:");
+            DelayConsole();
+            playerHand.Print();
+            DelayConsole();
+
+            // Naturals
+            if (playerHand.outcome == Hand.Type.Blackjack)
+            {
+                Log("\nA natural blackjack!");
+                Log("Can the dealer match it?");
+                DelayConsole(15);
+            }
+
+            Log("\nThe dealer's hand is:");
+            DelayConsole();
+            dealerHand.Print(true);
+            DelayConsole();
+
+            if (dealerHand.cards[0].value == 1 || dealerHand.cards[0].value >= 10)
+            {
+                if (playerHand.outcome == Hand.Type.Blackjack) Log("\nThe dealer could still tie with a natural of their own; They will check their face-down card...");
+                else Log("\nThe dealer could have a natural; They will check their face-down card...");
+                DelayConsole(15);
+
+                if (dealerHand.outcome == Hand.Type.Blackjack)
+                {
+                    Log("The dealer's face-down card is the " + dealerHand.cards[^1].name);
+                    Log("A natural blackjack!\n");
+                    if (playerHand.outcome == Hand.Type.Blackjack)
+                    {
+                        Log("It's a tie!");
+                        Payout(GameOutcome.tie, playerHand);
+                    }
+                    else Payout(GameOutcome.lose, playerHand);
+                }
+                else
+                {
+                    if (playerHand.outcome == Hand.Type.Blackjack)
+                    {
+                        Log("The dealer does not have a natural!");
+                        Payout(GameOutcome.win, playerHand);
+                    }
+                    else Log("The dealer does not have a natural");
+                }
+            }
+            else
+            {
+                if (playerHand.outcome == Hand.Type.Blackjack)
+                {
+                    Log("\nThe dealer cannot have a natural!");
+                    Payout(GameOutcome.win, playerHand);
+                }
+            }
+        }
+
+        void PlayerPhase(Hand playerHand)
+        {
+            string? playerInput;
+            while (true)
+            {
+                // Player Input
+                LogPrompt("\nYou may either hit or stand. Which would you like to do?");
+                playerInput = Console.ReadLine();
+                playerInput = playerInput?.Trim().ToLower();
+
+                if (playerInput == "hit" || playerInput == "h")
+                {
+                    DrawCard(playerHand, deck);
+                    Log("\nYou have been dealt the " + playerHand.cards[^1].name);
+                    break;
+                }
+                else if (playerInput == "stand" || playerInput == "s")
+                {
+                    Log("\nLet's see how the dealer does...");
+                    DelayConsole(15);
+                    return;
+                }
+                else
+                {
+                    Log("Invalid input; Please try again.");
+                }
+            }
+
+            Log("\nYour hand is:");
+            DelayConsole();
+            playerHand.Print();
+            DelayConsole();
 
             // Outcomes
-            if (hand.outcome == Hand.Type.Blackjack)
+            if (playerHand.outcome == Hand.Type.Blackjack)
             {
                 Log("\nBlackjack!");
                 Log("Let's see if the dealer can match it...");
                 DelayConsole(15);
                 return;
             }
-            else if (hand.outcome == Hand.Type.Bust)
+            else if (playerHand.outcome == Hand.Type.Bust)
             {
-                Log("\nYou've gone bust!\nYou have lost $" + currentBet + ".\n");
-                DelayConsole(15);
+                Log("\nYou've gone bust!");
+                Payout(GameOutcome.lose, playerHand);
                 return;
             }
             else
@@ -218,31 +305,9 @@ class Program
                 DelayConsole();
                 hands[0].Print(true);
                 DelayConsole();
-
-                while (true)
-                {
-                    // Player Input
-                    LogPrompt("\nYou may either hit or stand. Which would you like to do?");
-                    playerInput = Console.ReadLine();
-                    playerInput = playerInput?.Trim().ToLower();
-
-                    if (playerInput == "hit" || playerInput == "h")
-                    {
-                        PlayerPhase(hand);
-                        return;
-                    }
-                    else if (playerInput == "stand" || playerInput == "s")
-                    {
-                        Log("\nLet's see how the dealer does...\n");
-                        DelayConsole(15);
-                        return;
-                    }
-                    else
-                    {
-                        Log("Invalid input; Please try again.\n");
-                    }
-                }
             }
+
+            PlayerPhase(playerHand);
         }
 
         void DealerPhase()
@@ -250,7 +315,7 @@ class Program
             Hand dealerHand = hands[0];
             LogHeader("Dealer's Turn");
 
-            Log("The dealer's second card is the " + dealerHand.cards[^1].name);
+            Log("The dealer's face-down card is the " + dealerHand.cards[^1].name);
             DelayConsole(5);
             Log("\nThe dealer's hand is:");
             DelayConsole();
@@ -278,52 +343,94 @@ class Program
                     {
                         currentMoney += currentBet;
                         Log("\nIt's a tie!");
-                        Log("\nYour bet of $" + currentBet + " has been refunded");
-                        DelayConsole(15);
+                        Payout(GameOutcome.tie, playerHand);
                         return;
                     }
                     else
                     {
-                        Log("Blackjack beats " + playerHand.totalValue);
-                        Log("\nYou have lost $" + currentBet);
-                        DelayConsole(15);
+                        Log("\n21 beats " + playerHand.totalValue);
+                        Payout(GameOutcome.lose, playerHand);
                         return;
                     }
                 }
                 else if (dealerHand.outcome == Hand.Type.Bust)
                 {
-                    currentBet *= 1.5f;
-                    currentMoney += currentBet;
                     Log("\nThe dealer has gone bust!");
-                    Log("You have won $" + currentBet);
-                    DelayConsole(15);
+                    Payout(GameOutcome.win, playerHand);
                     return;
                 }
                 else if (dealerHand.totalValue > playerHand.totalValue)
                 {
                     Log("\n" + dealerHand.totalValue + " beats " + playerHand.totalValue + "!");
-                    Log("You have lost $" + currentBet);
-                    DelayConsole(15);
+                    Payout(GameOutcome.lose, playerHand);
                     return;
                 }
                 else if (playerHand.totalValue > dealerHand.totalValue)
                 {
-                    currentBet *= 1.5f;
-                    currentMoney += currentBet;
                     Log("\n" + playerHand.totalValue + " beats " + dealerHand.totalValue + "!");
-                    Log("You have won $" + currentBet);
+                    Payout(GameOutcome.win, playerHand);
                     DelayConsole(15);
                     return;
                 }
                 else
                 {
-                    currentMoney += currentBet;
                     Log("\nIt's a tie!");
-                    Log("\nYour bet of $" + currentBet + " has been refunded");
-                    DelayConsole(15);
+                    Payout(GameOutcome.tie, playerHand);
                     return;
                 }
             }
+        }
+
+        void Payout(GameOutcome gameOutcome, Hand playerHand)
+        {
+            switch (gameOutcome)
+            {
+                case GameOutcome.win:
+                    {
+                        currentBet *= 1.5f;
+                        currentMoney += currentBet;
+                        Log("You have won a total of $" + currentBet);
+                        break;
+                    }
+                case GameOutcome.lose:
+                    {
+                        Log("You have lost your bet of $" + currentBet);
+                        break;
+                    }
+                case GameOutcome.tie:
+                    {
+                        currentMoney += currentBet;
+                        Log("Your bet of $" + currentBet + " has been refunded");
+                        break;
+                    }
+            }
+            hands.Remove(playerHand);
+            DelayConsole(15);
+        }
+
+        bool CheckMoney()
+        {
+            if (currentMoney == 0)
+            {
+                LogHeader("Broke");
+                Log("You have run out of money!");
+                DelayConsole(10);
+                Log("Stop gambling and reevaluate your life choices...");
+                DelayConsole(25);
+                ClearConsole();
+                return true;
+            }
+            else if (currentMoney >= 50000)
+            {
+                LogHeader("\nBanned");
+                Log("You have been kicked out of the casino!");
+                DelayConsole(10);
+                Log("Take your lucky $" + currentMoney + " and get outta here...");
+                DelayConsole(25);
+                ClearConsole();
+                return true;
+            }
+            else return false;
         }
 
 
@@ -339,34 +446,16 @@ class Program
             BettingPhase();
             if (!isPlaying) return;
 
-            bool completelyBust = true;
+            int handsInPlay = hands.Count - 1;
             for (int i = 1; i < hands.Count; i++) // For each of the player's hands
             {
-                PlayerPhase(hands[i], 2);
-                if (hands[i].outcome != Hand.Type.Bust) completelyBust = false;
+                PlayerSetupPhase(hands[i]);
+                if (hands.Count - 1 < i) break;
+                PlayerPhase(hands[i]);
             }
-            if (!completelyBust) DealerPhase();
-
-            if (currentMoney == 0)
-            {
-                LogHeader("Broke");
-                Log("You have run out of money!");
-                DelayConsole(10);
-                Log("Stop gambling and reevaluate your life choices...");
-                DelayConsole(25);
-                ClearConsole();
-                return;
-            }
-            else if (currentMoney >= 50000)
-            {
-                LogHeader("\nBanned");
-                Log("You have been kicked out of the casino!");
-                DelayConsole(10);
-                Log("Take your lucky $" + currentMoney + " and get outta here...");
-                DelayConsole(25);
-                ClearConsole();
-                return;
-            }
+            if (hands.Count == 1) continue;
+            DealerPhase();
+            if (CheckMoney()) return;
         }
 
         #endregion
@@ -445,6 +534,11 @@ public class Hand
     {
         Blackjack, Safe, Bust
     }
+}
+
+public enum GameOutcome
+{
+    win, lose, tie
 }
 
 #endregion
