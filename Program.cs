@@ -1,5 +1,4 @@
 #region Settings Class
-
 public static class Settings
 {
     public static string[] suits = ["Spades", "Hearts", "Clubs", "Diamonds"];
@@ -29,6 +28,7 @@ class Program
         bool isPlaying;
         float currentMoney = 1200;
         int currentBet;
+        int currentSideBet;
         Deck deck;
         List<Hand> hands;
 
@@ -87,12 +87,12 @@ class Program
                         while (true)
                         {
                             Log.Header("Tutorial");
-                            switch (Log.GetPlayerInputString("What part of the game would you like a tutorial on?", ["Basics", "Values", "Naturals", "Splitting", "Insurance", "Exit"]))
+                            switch (Log.GetPlayerInputString("What part of the game would you like a tutorial on?", ["Basics", "Values", "Naturals", "Splitting", "Doubling Down", "Insurance", "Exit"]))
                             {
                                 case "basics":
                                     Log.Header("Basic Rules");
 
-                                    Log.Message("Blackjack is a push-your-luck betting game in which you will draw cards and add up their scores to get as close to a total value of 21 without going over");
+                                    Log.Message("Blackjack is a push-your-luck betting game in which you will draw cards and add up their scores to get as close to a total of 21 without going over");
                                     Log.Delay(15);
                                     Log.Message("\nYou will initially be dealt two cards, as will the dealer (although one of their cards will be face-down)");
                                     Log.Message("Then, you will have the option to either \"hit\" (be dealt another card) or \"stand\" (stick with your current total)");
@@ -103,10 +103,13 @@ class Program
                                     Log.Message("• If they end with a total that is greater than your hand's score, you lose");
                                     Log.Message("• If their hand's score exceed 21, they go bust and you win\n");
                                     Log.Delay(5);
+                                    
                                     Log.GetPlayerInputString("Return to main menu:", ["Exit"]);
                                     break;
 
                                 case "values":
+                                    Log.Header("Values");
+
                                     Log.Message("Number cards 2-10 count as their number value");
                                     for (int v = 2; v <= 10; v++) Log.Message("[" + v + "]");
                                     Log.Delay(15);
@@ -116,6 +119,7 @@ class Program
                                     Log.Message("\nAces count as either one or eleven; You can decide based on what's most convenient");
                                     Console.Write("[A]\n");
                                     Log.Delay(5);
+
                                     Log.GetPlayerInputString("Return to main menu:", ["Exit"]);
                                     break;
 
@@ -127,20 +131,47 @@ class Program
                                     Log.Message("If that is the case, they will secretly check their face-down card, and reveal a natural if they have it");
                                     Log.Message("\nIf you have a natural and the dealer's doesn't, you win, but if the dealer has a natural and you don't, you lose\n");
                                     Log.Delay(5);
+
                                     Log.GetPlayerInputString("Return to main menu:", ["Exit"]);
                                     break;
 
                                 case "splitting":
                                     Log.Header("Splitting");
-                                    Log.Message("\n");
+
+                                    Log.Message("If your first two cards share the same value, you may choose to split them into two unique hands");
+                                    Log.Message("\nWhen splitting pairs, one hand takes your original bet, and you must match that bet for the other hand");
+                                    Log.Message("You will play the two hands seperately, hitting until you stand or go bust with each one before it is the dealer's turn");
+                                    Log.Message("\nWhen splitting pairs, one hand takes your original bet, and you must match it for the other hand");
+                                    Log.Message("If you do not have enough money to effectively double your bet in this way, you may not split your hand");
+                                    Log.Message("\nLastly, if you choose to split a pair of aces, you will only be dealt one more card for each hand, after which the dealer will play");
+                                    Log.Message("If you score a blackjack with that one last card in either hand, the payout is 2x your bet, rather than the usual 1.5x\n");
                                     Log.Delay(5);
+
+                                    Log.GetPlayerInputString("Return to main menu:", ["Exit"]);
+                                    break;
+
+                                case "doubling down":
+                                    Log.Header("Doubling Down");
+
+                                    Log.Message("If your first two cards total a value of 9, 10, or 11, you may choose to double down");
+                                    Log.Message("\nDoubling down means that you double your bet and will be dealt just one more card before the dealer's turn");
+                                    Log.Message("It's high risk, but high reward");
+                                    Log.Message("\nOf course, if you do not have the money to double your bet, you cannot double down\n");
+                                    Log.Delay(5);
+
                                     Log.GetPlayerInputString("Return to main menu:", ["Exit"]);
                                     break;
 
                                 case "insurance":
                                     Log.Header("Insurance");
-                                    Log.Message("\n");
+
+                                    Log.Message("When the dealer is dealt an Ace as their face-up card, and therefore could have a natural blackjack, you can choose to purchase insurance");
+                                    Log.Message("\nPurchasing insurance means that you are betting that the dealer does indeed have a blackjack, as a way of minimizing your losses if they do");
+                                    Log.Message("You can bet up to half of the original bet you made on this outcome, and if the dealer has a blackjack you will win 2x your insurance bet");
+                                    Log.Message("This means if you bet the maximum amount, you could win back all the money that you lost from the dealer's natural");
+                                    Log.Message("\nThat being said, if the dealer does not have a blackjack, you will lose your insurance bet, so choose wisely\n");
                                     Log.Delay(5);
+
                                     Log.GetPlayerInputString("Return to main menu:", ["Exit"]);
                                     break;
 
