@@ -28,7 +28,6 @@ class Program
         bool isPlaying;
         float currentMoney = 1200;
         int currentBet;
-        int currentSideBet;
         Deck deck;
         List<Hand> hands;
 
@@ -103,7 +102,7 @@ class Program
                                     Log.Message("• If they end with a total that is greater than your hand's score, you lose");
                                     Log.Message("• If their hand's score exceed 21, they go bust and you win\n");
                                     Log.Delay(5);
-                                    
+
                                     Log.GetPlayerInputString("Return to main menu:", ["Exit"]);
                                     break;
 
@@ -236,8 +235,62 @@ class Program
                 Log.Message("Can the dealer match it?");
                 Log.Delay(15);
             }
+            // Splitting pairs & Doubling down
+            // else if (playerHand.cards.Count == 2)
+            // {
+            //     if (playerHand.cards[0].value == playerHand.cards[1].value)
+            //     {
+            //         Log.Message("\nYou have a pair!");
+            //         if (currentMoney >= currentBet)
+            //         {
+            //             switch (Log.GetPlayerInputString("Would you like to split it?", ["Yes", "No"]))
+            //             {
+            //                 case "yes":
+            //                     Hand newHand = new();
+            //                     hands.Add(newHand);
+            //                     newHand.cards.Add(playerHand.cards[1]);
+            //                     playerHand.cards.RemoveAt(1);
+            //                     Log.Message("\nYou have split your pair!");
+            //                     break;
 
-            Log.Message("\nThe dealer's hand is:");
+            //                 case "no":
+            //                     break;
+            //             }
+            //         }
+            //         else
+            //         {
+            //             Log.Message("Unfortunately, you do not have enough money to split the pair and double your bet");
+            //         }
+            //         Log.Delay(15);
+            //     }
+            //     if (playerHand.cards[0].value + playerHand.cards[1].value >= 9 && playerHand.cards[0].value + playerHand.cards[1].value <= 11)
+            //     {
+            //         Log.Message("\nYour cards add up to " + playerHand.cards[0].value + playerHand.cards[1].value);
+            //         if (currentMoney >= currentBet)
+            //         {
+            //             switch (Log.GetPlayerInputString("Would you like to double down?", ["Yes", "No"]))
+            //             {
+            //                 case "yes":
+            //                     currentBet *= 2;
+            //                     Log.Message("\nYou have doubled down with a total bet of " + currentBet + "!");
+            //                     deck.Deal(playerHand);
+            //                     Log.Delay();
+            //                     Log.Message("\nAs your final card for this hand, you have been dealt the " + playerHand.cards[^1].name);
+            //                     break;
+
+            //                 case "no":
+            //                     break;
+            //             }
+            //         }
+            //         else
+            //         {
+            //             Log.Message("Unfortunately, you do not have enough money to double down");
+            //         }
+            //         Log.Delay(15);
+            //     }
+            // }
+
+                Log.Message("\nThe dealer's hand is:");
             Log.Delay();
             dealerHand.Print(true);
             Log.Delay();
@@ -257,8 +310,13 @@ class Program
                     {
                         Log.Message("It's a tie!");
                         Payout(GameOutcome.tie, playerHand);
+                        return;
                     }
-                    else Payout(GameOutcome.lose, playerHand);
+                    else
+                    {
+                        Payout(GameOutcome.lose, playerHand);
+                        return;
+                    }
                 }
                 else
                 {
@@ -266,6 +324,7 @@ class Program
                     {
                         Log.Message("The dealer does not have a natural!");
                         Payout(GameOutcome.win, playerHand);
+                        return;
                     }
                     else Log.Message("The dealer does not have a natural");
                 }
@@ -276,6 +335,7 @@ class Program
                 {
                     Log.Message("\nThe dealer cannot have a natural!");
                     Payout(GameOutcome.win, playerHand);
+                    return;
                 }
             }
         }
@@ -305,7 +365,7 @@ class Program
             if (playerHand.outcome == Hand.Type.Blackjack)
             {
                 Log.Message("\nBlackjack!");
-                Log.Message("Let's see if the dealer can match it...");
+                Log.Message("We'll see if the dealer can match it...");
                 Log.Delay(15);
                 return;
             }
@@ -324,6 +384,7 @@ class Program
             }
 
             PlayerPhase(playerHand);
+            return;
         }
 
         void DealerPhase()
@@ -355,6 +416,7 @@ class Program
 
                 if (dealerHand.outcome == Hand.Type.Blackjack)
                 {
+                    Log.Message("Blackjack!");
                     if (playerHand.outcome == Hand.Type.Blackjack)
                     {
                         currentMoney += currentBet;
