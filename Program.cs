@@ -6,16 +6,17 @@ public static class Settings
     public static string[] values = ["Ace", "Two", "Three", "Four", "Five", "Six", "Seven", "Eight", "Nine", "Ten", "Jack", "Queen", "King"];
     public static string[] valueAbbrevs = ["A", "2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K"];
 
-    public static int numDecks = 1;
+    public static int numDecks = 6;
     public static int numSuits = suits.Length;
     public static int numValues = values.Length;
     public static int shuffleThresholdPercent = 75;
+    public static bool showCardCount = false;
 
     public static int textSpeed = 10;
     public static int lineDelay = 120;
 
-    public static bool noConsoleDelay = true;
-    public static bool noConsoleClear = true;
+    public static bool noConsoleDelay = false;
+    public static bool noConsoleClear = false;
     public static ResponseShortcutMode responseShortcutMode = ResponseShortcutMode.letter;
 
     public static int[] PossibleBets = [5, 10, 25, 50, 75, 100, 150, 300, 500, 1000];
@@ -61,6 +62,8 @@ class Program
                         Log.Header("Betting");
                         while (true)
                         {
+                            if (Settings.showCardCount) Log.Message("There are " + (deck.cards.Count + 2) + " cards left in the deck\n");
+
                             int playerInputBet = Log.GetPlayerInputInt("You have $" + currentMoney + "\nHow much would you like to bet?", ['$']);
                             if (playerInputBet <= 0)
                             {
@@ -181,6 +184,114 @@ class Program
 
                     case "settings":
                         Log.Header("Settings");
+
+                        switch (Log.GetPlayerInputString("Which settings would you like to edit?", ["Number of decks", "Shuffle threshold", "Card count visibility", "Text speed", "Line speed", "Response Shortcuts", "Debug Mode"]))
+                        {
+                            case "number of decks":
+                                Log.Header("Number of Decks");
+                                Log.Message("This setting controls how many standard decks of cards are shuffled together to make the complete deck cards are dealt from");
+                                Log.Message("The most common way to play Blackjack is with 6 decks, meaning 312 cards total");
+                                Log.Message("\n Note: Changing this setting from its current value will reshuffle the deck");
+                                Log.Delay(15);
+                                int numDecks = Log.GetPlayerInputInt("\nHow many decks of cards would you like to play with?");
+                                if (numDecks != Settings.numDecks)
+                                {
+                                    Settings.numDecks = numDecks;
+                                    deck = new();
+                                    deck.Shuffle();
+                                }
+                                Log.Message("\nSettings updated!");
+                                break;
+
+                            case "shuffle threshold":
+                                Log.Header("Shuffle Threshold");
+                                Log.Message("This setting controls at what percentage of the deck being played does the dealer reshuffle the deck?");
+                                Log.Message("Standard Blackjack usually reshuffles once through with about 75% of the cards");
+                                Log.Delay(15);
+                                Settings.shuffleThresholdPercent = Log.GetPlayerInputInt("\nAfter what percentage of the total cards being used would you like to reshuffle the deck?", [], ['%']);
+                                Log.Message("\nSettings updated!");
+                                break;
+
+                            case "card count visibility":
+                                Log.Header("Card Count Visibility");
+                                Log.Message("This setting is a toggle that, when active, shows the number of cards left in the deck at the start of a round");
+                                Log.Delay(15);
+                                switch (Log.GetPlayerInputString("\nWould you like to enable automatic card counting?", ["Yes", "No"]))
+                                {
+                                    case "yes":
+                                        Settings.showCardCount = true;
+                                        break;
+
+                                    case "no":
+                                        Settings.showCardCount = false;
+                                        break;
+                                }
+                                Log.Message("\nSettings updated!");
+                                break;
+
+                            case "text speed":
+                                Log.Header("Text Speed");
+                                Log.Message("This setting controls the delay between each text character being printed to the terminal");
+                                Log.Message("The default value is 10. Lower values will be faster, higher ones will be slower");
+                                Log.Delay(15);
+                                Settings.textSpeed = Log.GetPlayerInputInt("\nHow much delay would you like in between each text character being printed?");
+                                Log.Message("\nSettings updated!");
+                                break;
+
+                            case "line speed":
+                                Log.Header("Line Speed");
+                                Log.Message("This setting controls the delay between each new line being printed to the terminal");
+                                Log.Message("The default value is 120. Lower values will be faster, higher ones will be slower");
+                                Log.Delay(15);
+                                Settings.textSpeed = Log.GetPlayerInputInt("\nHow much delay would you like in between each new line being printed?");
+                                Log.Message("\nSettings updated!");
+                                break;
+
+                            case "response shortcuts":
+                                Log.Header("Response Shortcut");
+                                Log.Message("This setting determines what shortcut will be displayed next to multiple-choice prompts");
+                                Log.Message("\"Letter\" is the default, and will display the first letter of the choice next to it • \"[T] True\"");
+                                Log.Message("\"Value\" will display which index the choice is next to it • \"[1] True\"");
+                                Log.Message("\"None\" will not display anything next to the choice • \"[True]\"");
+
+                                Log.Message("\nNote: This only controls the visuals for choice text - no matter what this setting is set to, you can still use letter or number shortcuts");
+                                switch (Log.GetPlayerInputString("\nWhat would you like to be displayed next to text choices?", ["Letter", "Value", "None"]))
+                                {
+                                    case "letter":
+                                        Settings.responseShortcutMode = ResponseShortcutMode.letter;
+                                        break;
+
+                                    case "value":
+                                        Settings.responseShortcutMode = ResponseShortcutMode.number;
+                                        break;
+
+                                    case "none":
+                                        Settings.responseShortcutMode = ResponseShortcutMode.none;
+                                        break;
+                                }
+                                Log.Message("\nSettings updated!");
+                                break;
+
+                            case "debug mode":
+                                Log.Header("Debug Mode");
+                                Log.Message("This setting is a toggle that, when active, does two things");
+                                Log.Message("It allows text in the terminal to instantly appear instead of animating in and it prevents text from being cleared for screen transitions");
+                                Log.Delay(15);
+                                switch (Log.GetPlayerInputString("\nWould you like to enable debug mode?", ["Yes", "No"]))
+                                {
+                                    case "yes":
+                                        Settings.noConsoleClear = true;
+                                        Settings.noConsoleDelay = true;
+                                        break;
+
+                                    case "no":
+                                        Settings.noConsoleClear = false;
+                                        Settings.noConsoleDelay = false;
+                                        break;
+                                }
+                                Log.Message("\nSettings updated!");
+                                break;
+                        }
                         Log.Delay(15);
                         break;
 
@@ -511,8 +622,6 @@ class Program
 
         bool CheckDeckPercent()
         {
-            Log.Message((Settings.numDecks * Settings.numSuits * Settings.numValues) + " = Total");
-            Log.Message(deck.cards.Count + " = Current");
             int totalCards = Settings.numDecks * Settings.numSuits * Settings.numValues;
             if (deck.cards.Count < (int)((float)totalCards / 100 * Settings.shuffleThresholdPercent)) return true;
             else return false;
@@ -730,14 +839,14 @@ public static class Log
                 string option = options[i].Trim().ToLower();
 
                 if (playerInput == option) return option;
-                else if (Settings.responseShortcutMode == ResponseShortcutMode.letter && (playerInput == option[0].ToString())) return option;
-                else if (Settings.responseShortcutMode == ResponseShortcutMode.number && playerInput == i.ToString()) return option;
+                else if (playerInput == option[0].ToString()) return option;
+                else if (playerInput == i.ToString()) return option;
             }
             Message("\nInvalid input; Please try again\n");
         }
     }
 
-    public static int GetPlayerInputInt(string prompt, char[]? startCharacters = null)
+    public static int GetPlayerInputInt(string prompt, char[]? startCharacters = null, char[]? endCharacters = null)
     {
         string? playerInputString;
         while (true)
@@ -747,8 +856,10 @@ public static class Log
             Console.Write("\n› ");
 
             playerInputString = Console.ReadLine();
-            playerInputString = playerInputString?.Trim().ToLower();
-            if (startCharacters != null) playerInputString?.TrimStart(startCharacters);
+            playerInputString ??= "";
+            playerInputString = playerInputString.Trim().ToLower();
+            if (startCharacters != null) playerInputString.TrimStart(startCharacters);
+            if (endCharacters != null) playerInputString.TrimEnd(endCharacters);
 
             if (int.TryParse(playerInputString, out int playerInputInt)) return playerInputInt;
             else
