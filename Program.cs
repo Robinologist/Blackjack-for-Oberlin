@@ -9,12 +9,13 @@ public static class Settings
     public static int numDecks = 1;
     public static int numSuits = suits.Length;
     public static int numValues = values.Length;
+    public static int shuffleThresholdPercent = 75;
 
     public static int textSpeed = 10;
     public static int lineDelay = 120;
 
-    public static bool noConsoleDelay = false;
-    public static bool noConsoleClear = false;
+    public static bool noConsoleDelay = true;
+    public static bool noConsoleClear = true;
     public static ResponseShortcutMode responseShortcutMode = ResponseShortcutMode.letter;
 
     public static int[] PossibleBets = [5, 10, 25, 50, 75, 100, 150, 300, 500, 1000];
@@ -43,9 +44,6 @@ class Program
         {
             isPlaying = true;
             currentBet = 0;
-
-            deck = new();
-            deck.Shuffle();
 
             hands = [new Hand(), new Hand()]; // Dealer's hand is always index 0
             deck.Deal(hands[0], 2);
@@ -511,15 +509,35 @@ class Program
             else return false;
         }
 
+        bool CheckDeckPercent()
+        {
+            Log.Message((Settings.numDecks * Settings.numSuits * Settings.numValues) + " = Total");
+            Log.Message(deck.cards.Count + " = Current");
+            int totalCards = Settings.numDecks * Settings.numSuits * Settings.numValues;
+            if (deck.cards.Count < (int)((float)totalCards / 100 * Settings.shuffleThresholdPercent)) return true;
+            else return false;
+        }
 
         #endregion
 
         #region Program
 
         TitleScreen();
+        deck = new();
+        deck.Shuffle();
+
         while (true)
         {
             SetupPhase();
+            if (CheckDeckPercent())
+            {
+                Log.Message("\nThe deck is " + Settings.shuffleThresholdPercent + "% of the way through; it's time to reshuffle");
+                deck = new();
+                deck.Shuffle();
+                Log.Delay(15);
+                Log.Message("The deck has been shuffled!");
+                Log.Delay(15);
+            }
 
             MenuPhase();
             if (!isPlaying) return;
