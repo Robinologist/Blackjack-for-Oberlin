@@ -43,7 +43,7 @@ class Program
 
         void PrintPlayerHand(Hand playerHand)
         {
-            Log.Message("\nYour hand is:");
+            Log.Message("Your hand is:");
             Log.Delay();
             playerHand.Print();
             Log.Delay();
@@ -51,7 +51,7 @@ class Program
 
         void PrintDealerHand(bool showOnlyFirst = true)
         {
-            Log.Message("\nThe dealer's hand is:");
+            Log.Message("The dealer's hand is:");
             Log.Delay();
             hands[0].Print(showOnlyFirst);
             Log.Delay();
@@ -347,6 +347,7 @@ class Program
 
             playerHand.Score();
 
+            Log.Message("");
             PrintPlayerHand(playerHand);
 
             // Naturals
@@ -358,6 +359,7 @@ class Program
                 Log.Delay(15);
             }
 
+            Log.Message("");
             PrintDealerHand();
 
             if (dealerHand.cards[0].value == 1 || dealerHand.cards[0].value >= 10)
@@ -421,6 +423,7 @@ class Program
                                 deck.Deal(playerHand);
                                 Log.Delay();
                                 Log.Message("\nAs your final card for this hand, you have been dealt the " + playerHand.cards[^1].name);
+                                Log.Message("");
                                 PrintPlayerHand(playerHand);
                                 Log.Delay(15);
                                 DealerPhase();
@@ -437,50 +440,63 @@ class Program
                     Log.Delay(15);
                 }
                 // Splitting pairs
-                // else if (playerHand.cards[0].value == playerHand.cards[1].value)
-                //     {
-                //         Log.Message("\nYou have a pair!");
-                //         if (currentMoney >= currentBet)
-                //         {
-                //             switch (Log.GetPlayerInputString("Would you like to split it?", ["Yes", "No"]))
-                //             {
-                //                 case "yes":
-                //                     Hand newHand = new();
-                //                     hands.Add(newHand);
-                //                     newHand.cards.Add(playerHand.cards[1]);
-                //                     playerHand.cards.RemoveAt(1);
-                //                     Log.Message("\nYou have split your pair!");
-                //                     break;
+                if (playerHand.cards[0].value == playerHand.cards[1].value)
+                {
+                    Log.Message("\nYou have a pair!");
+                    if (currentMoney >= currentBet)
+                    {
+                        switch (Log.GetPlayerInputString("Would you like to split it?", ["Yes", "No"]))
+                        {
+                            case "yes":
+                                Hand newHand = new();
+                                hands.Add(newHand);
+                                newHand.cards.Add(playerHand.cards[1]);
+                                playerHand.cards.RemoveAt(1);
+                                Log.Message("\nYou have split your pair!");
+                                Log.Delay(15);
+                                int index1 = hands.IndexOf(playerHand);
+                                int index2 = hands.IndexOf(newHand);
+                                Log.Header("Player's Turn (Hand #" + index1 + ")");
+                                PrintPlayerHand(playerHand);
+                                PlayerPhase(playerHand);
+                                Log.Header("Player's Turn (Hand #" + index2 + ")");
+                                PrintPlayerHand(newHand);
+                                PlayerPhase(newHand);
+                                return;
 
-                //                 case "no":
-                //                     break;
-                //             }
-                //         }
-                //         else
-                //         {
-                //             Log.Message("Unfortunately, you do not have enough money to split the pair and double your bet");
-                //         }
-                //         Log.Delay(15);
-                //     }
+                            case "no":
+                                break;
+                        }
+                        Log.Delay(15);
+                    }
+                    else
+                    {
+                        Log.Message("Unfortunately, you do not have enough money to split the pair and double your bet");
+                    }
+                    Log.Delay(15);
+                }
             }
+
+            PlayerPhase(hands[1]);
         }
 
         void PlayerPhase(Hand playerHand)
         {
             // Player Input
             switch (Log.GetPlayerInputString("\nYou may either hit or stand. Which would you like to do?", ["Hit", "Stand"]))
-            {
-                case "hit":
-                    deck.Deal(playerHand);
-                    Log.Message("\nYou have been dealt the " + playerHand.cards[^1].name);
-                    break;
+                {
+                    case "hit":
+                        deck.Deal(playerHand);
+                        Log.Message("\nYou have been dealt the " + playerHand.cards[^1].name);
+                        break;
 
-                case "stand":
-                    Log.Message("\nLet's see how the dealer does...");
-                    Log.Delay(15);
-                    return;
-            }
+                    case "stand":
+                        Log.Message("\nWe'll see how the dealer does...");
+                        Log.Delay(15);
+                        return;
+                }
 
+            Log.Message("");
             PrintPlayerHand(playerHand);
 
             // Outcomes
@@ -499,6 +515,7 @@ class Program
             }
             else
             {
+                Log.Message("");
                 PrintDealerHand();
             }
 
@@ -513,6 +530,7 @@ class Program
 
             Log.Message("The dealer's face-down card is the " + dealerHand.cards[^1].name);
             Log.Delay(5);
+            Log.Message("");
             PrintDealerHand(false);
             Log.Message("");
             Log.Delay();
@@ -525,11 +543,16 @@ class Program
                 Log.Message("The dealer has been dealt the " + dealerHand.cards[^1].name);
                 Log.Delay();
             }
+            Log.Message("");
 
             // Outcomes
-            for (int i = 1; i < hands.Count; i++)
+            int index = 1;
+            bool multipleHands = false;
+            if (hands.Count > 2) multipleHands = true;
+            while (hands.Count > 1)
             {
-                Hand playerHand = hands[i];
+                if (multipleHands) Log.Message("Hand #" + index);
+                Hand playerHand = hands[1];
 
                 if (dealerHand.outcome == Hand.Type.Blackjack)
                 {
@@ -537,41 +560,41 @@ class Program
                     if (playerHand.outcome == Hand.Type.Blackjack)
                     {
                         currentMoney += currentBet;
-                        Log.Message("\nIt's a tie!");
+                        Log.Message("It's a tie!");
                         Payout(GameOutcome.tie, playerHand);
-                        return;
                     }
                     else
                     {
-                        Log.Message("\n21 beats " + playerHand.totalValue);
+                        Log.Message("21 beats " + playerHand.totalValue);
                         Payout(GameOutcome.lose, playerHand);
-                        return;
                     }
                 }
                 else if (dealerHand.outcome == Hand.Type.Bust)
                 {
-                    Log.Message("\nThe dealer has gone bust!");
+                    Log.Message("The dealer has gone bust!");
                     Payout(GameOutcome.win, playerHand);
-                    return;
                 }
                 else if (dealerHand.totalValue > playerHand.totalValue)
                 {
                     Log.Message(dealerHand.totalValue + " beats " + playerHand.totalValue + "!");
                     Payout(GameOutcome.lose, playerHand);
-                    return;
                 }
                 else if (playerHand.totalValue > dealerHand.totalValue)
                 {
-                    Log.Message("\n" + playerHand.totalValue + " beats " + dealerHand.totalValue + "!");
+                    Log.Message(playerHand.totalValue + " beats " + dealerHand.totalValue + "!");
                     Payout(GameOutcome.win, playerHand);
                     Log.Delay(15);
-                    return;
                 }
                 else
                 {
-                    Log.Message("\nIt's a tie!");
+                    Log.Message("It's a tie!");
                     Payout(GameOutcome.tie, playerHand);
-                    return;
+                }
+
+                if (multipleHands)
+                {
+                    index++;
+                    Log.Message("");
                 }
             }
         }
@@ -659,14 +682,7 @@ class Program
             MenuPhase();
             if (!isPlaying) return;
 
-            int handsInPlay = hands.Count - 1;
-            for (int i = 1; i < hands.Count; i++) // For each of the player's hands
-            {
-                Hand playerHand = hands[i];
-                PlayerSetupPhase(playerHand);
-                if (hands.Count - 1 < i || playerHand.outcome != Hand.Type.Safe) continue;
-                PlayerPhase(hands[i]);
-            }
+            PlayerSetupPhase(hands[1]);
             if (hands.Count == 1) continue;
             DealerPhase();
             if (CheckMoney()) return;
