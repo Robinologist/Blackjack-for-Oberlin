@@ -15,8 +15,8 @@ public static class Settings
     public static int textSpeed = 10;
     public static int lineDelay = 120;
 
-    public static bool noConsoleDelay = true;
-    public static bool noConsoleClear = true;
+    public static bool noConsoleDelay = false;
+    public static bool noConsoleClear = false;
     public static ResponseShortcutMode responseShortcutMode = ResponseShortcutMode.letter;
 
     public static int[] PossibleBets = [5, 10, 25, 50, 75, 100, 150, 300, 500, 1000];
@@ -64,7 +64,6 @@ class Program
 
             hands = [new Hand(), new Hand()]; // Dealer's hand is always index 0
             deck.Deal(hands[0], 2);
-            hands[0].Score();
         }
 
         void MenuPhase()
@@ -145,7 +144,7 @@ class Program
                                     Log.Message("If the very first two cards you are dealt are a Ten / face card and an Ace, congratulations! You've achieved a \"natural\" Blackjack! Watch out though, because the dealer can be dealt naturals too!");
                                     Log.Message("\nBecause one of the dealer's cards is face-down, you might not know whether they have a natural or not. If their face-up card is a Ten, face card, or Ace, there's a chance that they have a natural");
                                     Log.Message("If that is the case, they will secretly check their face-down card, and reveal a natural if they have it");
-                                    Log.Message("\nIf you have a natural and the dealer's doesn't, you win, but if the dealer has a natural and you don't, you lose\n");
+                                    Log.Message("\nIf you have a natural and the dealer's doesn't, you win 2.5x your bet, but if the dealer has a natural and you don't, you automatically lose\n");
                                     Log.Delay(5);
 
                                     Log.GetPlayerInputString("Return to main menu:", ["Exit"]);
@@ -160,7 +159,7 @@ class Program
                                     Log.Message("\nWhen splitting pairs, one hand takes your original bet, and you must match it for the other hand");
                                     Log.Message("If you do not have enough money to effectively double your bet in this way, you may not split your hand");
                                     Log.Message("\nLastly, if you choose to split a pair of aces, you will only be dealt one more card for each hand, after which the dealer will play");
-                                    Log.Message("If you score a blackjack with that one last card in either hand, the payout is 2x your bet, rather than the usual 1.5x\n");
+                                    Log.Message("If you score a blackjack with that one last card in either hand, the payout is 2.5x your bet, rather than the usual 2x\n");
                                     Log.Delay(5);
 
                                     Log.GetPlayerInputString("Return to main menu:", ["Exit"]);
@@ -345,8 +344,6 @@ class Program
                 Log.Delay();
             }
 
-            playerHand.Score();
-
             Log.Message("");
             PrintPlayerHand(playerHand);
 
@@ -405,6 +402,7 @@ class Program
                             break;
 
                         case "no":
+                            Log.Message("");
                             break;
                     }
                 }
@@ -436,7 +434,7 @@ class Program
                     {
                         Log.Message("The dealer does not have a natural!");
                         if (sideBet > 0) PayoutInsurance(sideBet, false);
-                        Payout(GameOutcome.win, playerHand);
+                        Payout(GameOutcome.naturalWin, playerHand);
                         return;
                     }
                     else
@@ -451,7 +449,7 @@ class Program
                 if (playerHand.outcome == Hand.Type.Blackjack)
                 {
                     Log.Message("\nThe dealer cannot have a natural!");
-                    Payout(GameOutcome.win, playerHand);
+                    Payout(GameOutcome.naturalWin, playerHand);
                     return;
                 }
             }
@@ -475,7 +473,6 @@ class Program
                                 Log.Message("\nAs your final card for this hand, you have been dealt the " + playerHand.cards[^1].name);
                                 Log.Message("");
                                 PrintPlayerHand(playerHand);
-                                playerHand.Score();
                                 if (playerHand.outcome == Hand.Type.Blackjack)
                                 {
                                     Log.Message("Blackjack!");
@@ -513,13 +510,18 @@ class Program
                                 int index1 = hands.IndexOf(playerHand);
                                 int index2 = hands.IndexOf(newHand);
                                 Log.Header("Player's Turn (Hand #" + index1 + ")");
-                                if (playerHand.cards[0].value == 1 || true) // Ace splitting
+                                if (playerHand.cards[0].value == 1) // Ace splitting
                                 {
                                     deck.Deal(playerHand);
                                     Log.Delay();
                                     Log.Message("\nAs your final card for this hand, you have been dealt the " + playerHand.cards[^1].name);
                                     Log.Message("");
                                     PrintPlayerHand(playerHand);
+                                    if (playerHand.outcome == Hand.Type.Blackjack)
+                                    {
+                                        Log.Message("\nBlackjack!");
+                                        Payout(GameOutcome.naturalWin, playerHand);
+                                    }
                                     Log.Delay(15);
                                 }
                                 else // Normal splitting
@@ -528,13 +530,18 @@ class Program
                                     PlayerPhase(playerHand);
                                 }
                                 Log.Header("Player's Turn (Hand #" + index2 + ")");
-                                if (playerHand.cards[0].value == 1 || true) // Ace splitting
+                                if (playerHand.cards[0].value == 1) // Ace splitting
                                 {
                                     deck.Deal(newHand);
                                     Log.Delay();
-                                    Log.Message("\nAs your final card for this hand, you have been dealt the " + playerHand.cards[^1].name);
+                                    Log.Message("\nAs your final card for this hand, you have been dealt the " + newHand.cards[^1].name);
                                     Log.Message("");
-                                    PrintPlayerHand(playerHand);
+                                    PrintPlayerHand(newHand);
+                                    if (newHand.outcome == Hand.Type.Blackjack)
+                                    {
+                                        Log.Message("\nBlackjack!");
+                                        Payout(GameOutcome.naturalWin, newHand);
+                                    }
                                     Log.Delay(15);
                                 }
                                 else // Normal splitting
@@ -619,7 +626,6 @@ class Program
             while (dealerHand.totalScore < 17)
             {
                 deck.Deal(dealerHand);
-                dealerHand.Score();
                 Log.Message("The dealer has been dealt the " + dealerHand.cards[^1].name);
                 Log.Delay();
             }
@@ -683,11 +689,18 @@ class Program
         {
             switch (gameOutcome)
             {
+                case GameOutcome.naturalWin:
+                    {
+                        currentBet = (int)Math.Ceiling(currentBet * 2.5);
+                        Log.Message("You have won $" + currentBet);
+                        currentMoney += currentBet;
+                        break;
+                    }
                 case GameOutcome.win:
                     {
-                        currentBet = (int)Math.Ceiling(currentBet * 1.5);
-                        currentMoney += currentBet;
                         Log.Message("You have won $" + currentBet);
+                        currentBet *= 2;
+                        currentMoney += currentBet;
                         break;
                     }
                 case GameOutcome.lose:
@@ -1017,7 +1030,7 @@ public static class Log
 #region Public Enums
 public enum GameOutcome
 {
-    win, lose, tie
+    win, lose, tie, naturalWin
 }
 
 public enum ResponseShortcutMode
