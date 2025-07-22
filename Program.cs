@@ -475,6 +475,12 @@ class Program
                                 Log.Message("\nAs your final card for this hand, you have been dealt the " + playerHand.cards[^1].name);
                                 Log.Message("");
                                 PrintPlayerHand(playerHand);
+                                playerHand.Score();
+                                if (playerHand.outcome == Hand.Type.Blackjack)
+                                {
+                                    Log.Message("Blackjack!");
+                                    Log.Message("We'll see if the dealer can match it...");
+                                }
                                 Log.Delay(15);
                                 DealerPhase();
                                 return;
