@@ -264,12 +264,12 @@ class Program
 
                             case "response shortcuts":
                                 Log.Header("Response Shortcut");
-                                Log.Message("This setting determines what shortcut will be displayed next to multiple-choice prompts");
-                                Log.Message("\"Letter\" is the default, and will display the first letter of the choice next to it • \"[T] True\"");
-                                Log.Message("\"Value\" will display which index the choice is next to it • \"[1] True\"");
-                                Log.Message("\"None\" will not display anything next to the choice • \"[True]\"");
-
-                                Log.Message("\nNote: This only controls the visuals for choice text - no matter what this setting is set to, you can still use letter or number shortcuts");
+                                Log.Message("This setting determines what shortcut will be displayed next to multiple-choice prompts:\n");
+                                Log.Message("• \"Letter\" is the default, and will display the first letter of the choice");
+                                Log.Message("• \"Value\" will display the index of the choice");
+                                Log.Message("• \"None\" will not display anything next to the choice");
+                                Log.Message("\nNote: This only controls the visuals for choice text - no matter what this setting is set to, you can still use letter or value shortcuts");
+                                Log.Delay(15);
                                 switch (Log.GetPlayerInputString("\nWhat would you like to be displayed next to text choices?", ["Letter", "Value", "None"]))
                                 {
                                     case "letter":
@@ -289,8 +289,9 @@ class Program
 
                             case "debug mode":
                                 Log.Header("Debug Mode");
-                                Log.Message("This setting is a toggle that, when active, does two things");
-                                Log.Message("It allows text in the terminal to instantly appear instead of animating in and it prevents text from being cleared for screen transitions");
+                                Log.Message("This setting is a toggle that, when active, does two things:\n");
+                                Log.Message("• It makes text in the terminal instantly appear instead of animating in");
+                                Log.Message("• It prevents text from being cleared for screen transitions");
                                 Log.Delay(15);
                                 switch (Log.GetPlayerInputString("\nWould you like to enable debug mode?", ["Yes", "No"]))
                                 {
@@ -957,7 +958,7 @@ public static class Log
                         }
                     case ResponseShortcutMode.number:
                         {
-                            Message("[" + i + "] " + option, false);
+                            Message("[" + (i + 1) + "] " + option, false);
                             break;
                         }
                 }
@@ -974,7 +975,7 @@ public static class Log
 
                 if (playerInput == option) return option;
                 else if (playerInput == option[0].ToString()) return option;
-                else if (playerInput == i.ToString()) return option;
+                else if (playerInput == (i + 1).ToString()) return option;
             }
             Message("\nInvalid input; Please try again\n");
         }
