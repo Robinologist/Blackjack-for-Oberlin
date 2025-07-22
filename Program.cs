@@ -15,8 +15,8 @@ public static class Settings
     public static int textSpeed = 10;
     public static int lineDelay = 120;
 
-    public static bool noConsoleDelay = false;
-    public static bool noConsoleClear = false;
+    public static bool noConsoleDelay = true;
+    public static bool noConsoleClear = true;
     public static ResponseShortcutMode responseShortcutMode = ResponseShortcutMode.letter;
 
     public static int[] PossibleBets = [5, 10, 25, 50, 75, 100, 150, 300, 500, 1000];
@@ -513,11 +513,35 @@ class Program
                                 int index1 = hands.IndexOf(playerHand);
                                 int index2 = hands.IndexOf(newHand);
                                 Log.Header("Player's Turn (Hand #" + index1 + ")");
-                                PrintPlayerHand(playerHand);
-                                PlayerPhase(playerHand);
+                                if (playerHand.cards[0].value == 1 || true) // Ace splitting
+                                {
+                                    deck.Deal(playerHand);
+                                    Log.Delay();
+                                    Log.Message("\nAs your final card for this hand, you have been dealt the " + playerHand.cards[^1].name);
+                                    Log.Message("");
+                                    PrintPlayerHand(playerHand);
+                                    Log.Delay(15);
+                                }
+                                else // Normal splitting
+                                {
+                                    PrintPlayerHand(playerHand);
+                                    PlayerPhase(playerHand);
+                                }
                                 Log.Header("Player's Turn (Hand #" + index2 + ")");
-                                PrintPlayerHand(newHand);
-                                PlayerPhase(newHand);
+                                if (playerHand.cards[0].value == 1 || true) // Ace splitting
+                                {
+                                    deck.Deal(newHand);
+                                    Log.Delay();
+                                    Log.Message("\nAs your final card for this hand, you have been dealt the " + playerHand.cards[^1].name);
+                                    Log.Message("");
+                                    PrintPlayerHand(playerHand);
+                                    Log.Delay(15);
+                                }
+                                else // Normal splitting
+                                {
+                                    PrintPlayerHand(newHand);
+                                    PlayerPhase(newHand);
+                                }
                                 return;
 
                             case "no":
@@ -896,7 +920,7 @@ public static class Log
         else Console.WriteLine(message);
     }
 
-    public static string GetPlayerInputString(string prompt, string[] options, char[]? startCharacters = null)
+    public static string GetPlayerInputString(string prompt, string[] options)
     {
         Message(prompt + "\n"); // Write prompt
         string? playerInput;
@@ -930,7 +954,6 @@ public static class Log
             playerInput = Console.ReadLine();
             playerInput ??= "";
             playerInput = playerInput.Trim().ToLower();
-            if (startCharacters != null) playerInput.TrimStart(startCharacters);
 
             for (int i = 0; i < options.Length; i++)
             {
@@ -956,8 +979,8 @@ public static class Log
             playerInputString = Console.ReadLine();
             playerInputString ??= "";
             playerInputString = playerInputString.Trim().ToLower();
-            if (startCharacters != null) playerInputString.TrimStart(startCharacters);
-            if (endCharacters != null) playerInputString.TrimEnd(endCharacters);
+            if (startCharacters != null) playerInputString = playerInputString.TrimStart(startCharacters);
+            if (endCharacters != null) playerInputString = playerInputString.TrimEnd(endCharacters);
 
             if (int.TryParse(playerInputString, out int playerInputInt)) return playerInputInt;
             else
