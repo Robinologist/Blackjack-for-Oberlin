@@ -366,6 +366,48 @@ class Program
             {
                 if (playerHand.outcome == Hand.Type.Blackjack) Log.Message("\nThe dealer could still tie with a natural of their own; They will check their face-down card...");
                 else Log.Message("\nThe dealer could have a natural; They will check their face-down card...");
+                Log.Delay();
+
+                // Insurance
+                int sideBet = 0;
+                if (currentMoney <= 0)
+                {
+                    Log.Message("Unfortunately, you do not have enough money to buy insurance\n");
+                }
+                else if (currentBet <= 1)
+                {
+                    Log.Message("Unfortunately, your bet is too small to buy insurance\n");
+                }
+                else
+                {
+                    switch (Log.GetPlayerInputString("Would you like to purchase insurance?", ["Yes", "No"]))
+                    {
+                        case "yes":
+                            while (true)
+                            {
+                                int playerInputBet = Log.GetPlayerInputInt("\nYou have $" + currentMoney + "\nHow much would you like to bet, up to $" + (currentBet / 2) + "?", ['$']);
+                                if (playerInputBet <= 0)
+                                {
+                                    Log.Message("\n$" + playerInputBet + " is below the minumum bet of $1; Please enter a larger bet\n");
+                                }
+                                else if (playerInputBet > currentBet)
+                                {
+                                    Log.Message("\nYou must bet less than your current bet of $" + currentBet + "; Please enter a smaller bet\n");
+                                }
+                                else
+                                {
+                                    Log.Message("\nYou have bet $" + playerInputBet + " that the dealer has a natural\n");
+                                    Log.Delay(15);
+                                    sideBet = playerInputBet;
+                                    break;
+                                }
+                            }
+                            break;
+
+                        case "no":
+                            break;
+                    }
+                }
                 Log.Delay(15);
 
                 if (dealerHand.outcome == Hand.Type.Blackjack)
@@ -373,15 +415,18 @@ class Program
                     Log.Message("The dealer's face-down card is the " + dealerHand.cards[^1].name);
                     Log.Delay();
                     Log.Message("Blackjack!\n");
+
                     if (playerHand.outcome == Hand.Type.Blackjack)
                     {
                         Log.Message("It's a tie!");
                         Payout(GameOutcome.tie, playerHand);
+                        if (sideBet > 0) PayoutInsurance(sideBet, true);
                         return;
                     }
                     else
                     {
                         Payout(GameOutcome.lose, playerHand);
+                        if (sideBet > 0) PayoutInsurance(sideBet, true);
                         return;
                     }
                 }
@@ -390,10 +435,15 @@ class Program
                     if (playerHand.outcome == Hand.Type.Blackjack)
                     {
                         Log.Message("The dealer does not have a natural!");
+                        if (sideBet > 0) PayoutInsurance(sideBet, false);
                         Payout(GameOutcome.win, playerHand);
                         return;
                     }
-                    else Log.Message("The dealer does not have a natural");
+                    else
+                    {
+                        Log.Message("The dealer does not have a natural");
+                        if (sideBet > 0) PayoutInsurance(sideBet, false);
+                    }
                 }
             }
             else
@@ -409,9 +459,9 @@ class Program
             // Doubling down
             if (playerHand.outcome != Hand.Type.Blackjack && playerHand.cards.Count == 2)
             {
-                if (playerHand.cards[0].value + playerHand.cards[1].value >= 9 && playerHand.cards[0].value + playerHand.cards[1].value <= 11)
+                if (playerHand.totalScore >= 9 && playerHand.totalScore <= 11)
                 {
-                    Log.Message("\nYour cards add up to " + (playerHand.cards[0].value + playerHand.cards[1].value));
+                    Log.Message("\nYour cards add up to " + playerHand.totalScore);
                     if (currentMoney >= currentBet)
                     {
                         switch (Log.GetPlayerInputString("Would you like to double down?", ["Yes", "No"]))
@@ -536,7 +586,7 @@ class Program
             Log.Delay();
 
             // Drawing up to 17
-            while (dealerHand.totalValue < 17)
+            while (dealerHand.totalScore < 17)
             {
                 deck.Deal(dealerHand);
                 dealerHand.Score();
@@ -565,7 +615,7 @@ class Program
                     }
                     else
                     {
-                        Log.Message("21 beats " + playerHand.totalValue);
+                        Log.Message("21 beats " + playerHand.totalScore);
                         Payout(GameOutcome.lose, playerHand);
                     }
                 }
@@ -574,14 +624,14 @@ class Program
                     Log.Message("The dealer has gone bust!");
                     Payout(GameOutcome.win, playerHand);
                 }
-                else if (dealerHand.totalValue > playerHand.totalValue)
+                else if (dealerHand.totalScore > playerHand.totalScore)
                 {
-                    Log.Message(dealerHand.totalValue + " beats " + playerHand.totalValue + "!");
+                    Log.Message(dealerHand.totalScore + " beats " + playerHand.totalScore + "!");
                     Payout(GameOutcome.lose, playerHand);
                 }
-                else if (playerHand.totalValue > dealerHand.totalValue)
+                else if (playerHand.totalScore > dealerHand.totalScore)
                 {
-                    Log.Message(playerHand.totalValue + " beats " + dealerHand.totalValue + "!");
+                    Log.Message(playerHand.totalScore + " beats " + dealerHand.totalScore + "!");
                     Payout(GameOutcome.win, playerHand);
                     Log.Delay(15);
                 }
@@ -607,7 +657,7 @@ class Program
                     {
                         currentBet = (int)Math.Ceiling(currentBet * 1.5);
                         currentMoney += currentBet;
-                        Log.Message("You have won a total of $" + currentBet);
+                        Log.Message("You have won $" + currentBet);
                         break;
                     }
                 case GameOutcome.lose:
@@ -624,6 +674,22 @@ class Program
             }
             hands.Remove(playerHand);
             Log.Delay(15);
+        }
+
+        void PayoutInsurance(int sideBet, bool isWin)
+        {
+            if (isWin)
+            {
+                sideBet *= 2;
+                Log.Message(currentMoney.ToString() + " " + sideBet.ToString());
+                currentMoney += sideBet;
+                Log.Message("You have won $" + sideBet + " off of your insurance bet");
+            }
+            else
+            {
+                currentMoney -= sideBet;
+                Log.Message("You have lost your insurance bet of $" + sideBet + "");
+            }
         }
 
         bool CheckMoney()
@@ -696,6 +762,7 @@ public class Card
 {
     public readonly int suit;
     public readonly int value;
+    public readonly int score;
     public readonly string name;
     public readonly string nameAbbrev;
 
@@ -757,32 +824,32 @@ public class Deck
 public class Hand
 {
     public List<Card> cards = [];
-    public int totalValue = 0;
+    public int totalScore = 0;
     public Type outcome = Type.Safe;
 
     public void Score()
     {
-        totalValue = 0;
+        totalScore = 0;
         int numAces = 0;
 
         // Base scoring
         foreach (Card card in cards)
         {
             if (card.value == 1) numAces++;
-            else if (card.value <= 10) totalValue += card.value;
-            else totalValue += 10;
+            else if (card.value <= 10) totalScore += card.value;
+            else totalScore += 10;
         }
 
         // Ace scoring
         for (int i = numAces; i > 0; i--)
         {
-            totalValue += 11;
-            if (totalValue > 21) totalValue -= 10;
+            totalScore += 11;
+            if (totalScore > 21) totalScore -= 10;
         }
 
         // Outcomes
-        if (totalValue == 21) outcome = Type.Blackjack;
-        else if (totalValue > 21) outcome = Type.Bust;
+        if (totalScore == 21) outcome = Type.Blackjack;
+        else if (totalScore > 21) outcome = Type.Bust;
         else outcome = Type.Safe;
     }
 
